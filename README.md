@@ -1,16 +1,17 @@
 # ComplyTrack — College Project MVP
 
-Compliance Deadline Management System built with Java 21, Spring Boot, PostgreSQL, Flyway, Angular, JWT, JUnit 5 and Mockito.
+Compliance Deadline Management System built with Java 21, Spring Boot, PostgreSQL, Flyway, Angular 18, JWT, JUnit 5 and Mockito.
 
 ## MVP scope
 - User registration and login with JWT
+- Sign-in is kept in memory, so a browser refresh signs the user out
 - Business profile management
-- Compliance rule listing and creation
-- Deadline listing, generation from rules, and completion
-- Dashboard counts
+- Compliance rule listing and creation, including overdue and due-soon dates
+- Deadline listing, generation from rules, sample overdue/due-soon items, and completion
+- Dashboard counts and an Alerts page for due soon and overdue items
 - Flyway-managed schema
-- Angular starter application
-- SRS, architecture, database model, test plan and demo script
+- Responsive Angular application
+- SRS, architecture, test plan and demo script
 
 > Educational demo only. Seeded compliance rules are examples, not legal advice. Verify actual filing deadlines against authoritative sources before any real-world use.
 
@@ -18,12 +19,13 @@ Compliance Deadline Management System built with Java 21, Spring Boot, PostgreSQ
 - JDK 21
 - Maven 3.9+
 - Node.js 20 LTS and npm
-- PostgreSQL 15+
-- Angular CLI compatible with the installed Angular version (optional)
+- PostgreSQL 15+ (or Docker, see below)
+
+Use JDK 21 for Maven. If a newer JDK is first on `PATH`, set `JAVA_HOME` to the JDK 21 installation before running Maven.
 
 ## Run the backend
 1. Create a PostgreSQL database named `complytrack`.
-2. Set environment variables if needed:
+2. Set environment variables if the defaults do not match the local server:
    - `DB_URL=jdbc:postgresql://localhost:5432/complytrack`
    - `DB_USERNAME=postgres`
    - `DB_PASSWORD=postgres`
@@ -31,29 +33,55 @@ Compliance Deadline Management System built with Java 21, Spring Boot, PostgreSQ
 3. From `backend/` run: `mvn spring-boot:run`
 4. API base URL: `http://localhost:8080/api/v1`
 
-Flyway creates the schema at startup.
+Flyway applies `V1__initial_schema.sql` and `V2__overdue_and_due_soon_rules.sql` at startup.
+
+On Windows the JVM may report the legacy zone id `Asia/Calcutta`, which current PostgreSQL rejects. The application sets the default zone to `Asia/Kolkata` before it connects.
+
+### Docker database
+If the installed PostgreSQL service does not accept the default password, start a project database on port 5433:
+
+```bash
+docker run -d --name complytrack-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=complytrack -p 5433:5432 postgres:16
+```
+
+Then start the API with `DB_URL=jdbc:postgresql://localhost:5433/complytrack`.
 
 ## Run the frontend
-The Angular frontend is a source starter. From `frontend/` run:
+From `frontend/`:
+
 ```bash
 npm install
 npm start
 ```
-If dependencies are not installed yet, create an Angular workspace with Angular CLI and copy `src/app` into it, or run `npx -y @angular/cli@18 new complytrack-ui --standalone --routing --style=css` and replace its `src/app` with this starter. Configure the API URL in `src/app/api.service.ts`.
 
-## Initial API routes
+Open `http://127.0.0.1:4200/`. The API client uses `http://localhost:8080/api/v1`.
+
+## Screens
+- `/login` and `/register` — one-screen layout on laptop and desktop
+- `/dashboard` — total, upcoming, due soon, overdue and completed
+- `/businesses` — create and list business profiles
+- `/rules` — demonstration rules and deadline generation
+- `/rules/new` — create a rule and optionally a deadline
+- `/attention` — overdue and due-soon lists, plus sample data
+- `/deadlines` — filter and complete deadlines
+
+## API routes
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
 - `GET /api/v1/businesses`
 - `POST /api/v1/businesses`
+- `GET /api/v1/businesses/{id}`
 - `GET /api/v1/rules`
 - `POST /api/v1/rules`
 - `GET /api/v1/deadlines`
 - `POST /api/v1/deadlines/generate?businessId={uuid}&ruleId={uuid}`
+- `POST /api/v1/deadlines/samples?businessId={uuid}`
 - `PATCH /api/v1/deadlines/{id}/complete`
 - `GET /api/v1/dashboard`
 
-Register first, then use the returned bearer token for protected endpoints.
+Register or log in first, then send `Authorization: Bearer {token}` on protected routes. A missing or invalid token returns 401.
+
+`POST /api/v1/rules` accepts `name`, `filingType`, `frequency` (`MONTHLY`, `QUARTERLY` or `YEARLY`), `jurisdiction`, optional `dayOfMonth` (1–31) and `nextDueDate`. A past date is reported as overdue. A date within seven days, including today, is reported as due soon.
 
 ## Security and production gaps
-This is a starter MVP, not a production compliance product. Before production: add email delivery provider, robust refresh-token rotation, rate limiting, malware scanning, object storage, tenant/business isolation tests, audit coverage, backup/restore, observability, privacy review, and verified compliance rules.
+This is a college MVP, not a production compliance product. Before production: add email delivery, refresh-token rotation, rate limiting, document upload checks, object storage, tenant isolation tests, audit coverage, backup/restore, observability, a privacy review, and verified compliance rules.

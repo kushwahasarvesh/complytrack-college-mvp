@@ -1,3 +1,5 @@
 # Backend tests
 
-Add service-level JUnit 5 / Mockito tests here as each module is completed. Minimum acceptance is documented in `docs/TEST_PLAN.md`. Use PostgreSQL-backed integration tests for Flyway and repository behavior; H2 alone does not fully verify PostgreSQL migrations.
+`deadline/DeadlineServiceTest.java` covers generation, ownership rejection, completion, and computed open status with JUnit 5 and Mockito.
+
+Further service tests should follow `docs/TEST_PLAN.md`. Use PostgreSQL for Flyway and repository checks. H2 does not fully verify the PostgreSQL migrations.
